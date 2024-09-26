@@ -1,6 +1,32 @@
+PROJECT_NAME ?= querido-diario
+CONDAENV_NAME ?= $(PROJECT_NAME)
+CONDAENV_BIN_PATH ?= $$(conda info --base)/envs/$(CONDAENV_NAME)/bin
+SRC_DIRS := ./data_collection
+
 ISORT_ARGS := --combine-star --combine-as --order-by-type --thirdparty scrapy --multi-line 3 --trailing-comma --force-grid-wrap 0 --use-parentheses --line-width 88
 
-SRC_DIRS := ./data_collection
+export PYTHONPATH := .:./data_collection
+
+# ===== Environment =====
+env-create:
+	conda create -n $(CONDAENV_NAME) -c conda-forge -y \
+		python=3.10 \
+		pip=24
+	$(CONDAENV_BIN_PATH)/python -m pip install uv
+
+env-install:
+	$(CONDAENV_BIN_PATH)/python -m uv pip install -r $(SRC_DIRS)/requirements-dev.txt
+	$(CONDAENV_BIN_PATH)/pre-commit install
+	@echo "#\n# To activate this environment, use:\n#\n#\t$$ conda activate $(CONDAENV_NAME)"
+	@echo "#\n# To deactivate an active environment, use:\n#\n#\t$$ conda deactivate"
+
+env-remove:
+	conda remove -n $(CONDAENV_NAME) --all -y
+
+env-update:env-remove env-create env-install
+
+
+# ===== Lint & Format =====
 
 check:
 	python3 -m isort --check --diff $(ISORT_ARGS) $(SRC_DIRS)
@@ -10,6 +36,9 @@ check:
 format:
 	python3 -m isort --apply $(ISORT_ARGS) $(SRC_DIRS)
 	python3 -m black $(SRC_DIRS)
+
+
+# ===== Run =====
 
 run_spider:
 	cd $(SRC_DIRS) && scrapy crawl $(SPIDER)
